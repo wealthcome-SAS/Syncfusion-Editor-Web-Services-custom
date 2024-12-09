@@ -32,7 +32,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("LoadString")]
         public string LoadString([FromBody]InputParameter data)
         {
@@ -49,7 +48,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("Import")]
         public string Import(IFormCollection data)
         {
@@ -199,7 +197,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("SpellCheck")]
         public string SpellCheck([FromBody] SpellCheckJsonData spellChecker)
         {
@@ -217,7 +214,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("SpellCheckByPage")]
         public string SpellCheckByPage([FromBody] SpellCheckJsonData spellChecker)
         {
@@ -250,7 +246,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("MailMerge")]
         public string MailMerge([FromBody] ExportData exportData)
         {
@@ -356,7 +351,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("SystemClipboard")]
         public string SystemClipboard([FromBody]CustomParameter param)
         {
@@ -389,7 +383,6 @@ namespace SyncfusionDocument.Controllers
         }
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("RestrictEditing")]
         public string[] RestrictEditing([FromBody]CustomRestrictParameter param)
         {
@@ -401,7 +394,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("LoadDefault")]
         public string LoadDefault()
         {
@@ -416,7 +408,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("LoadDocument")]
         public string LoadDocument([FromForm] UploadDocument uploadDocument)
         {
@@ -518,7 +509,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("Save")]
         public void Save([FromBody] SaveParameter data)
         {
@@ -537,7 +527,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("ExportSFDT")]
         public FileStreamResult ExportSFDT([FromBody] SaveParameter data)
         {
@@ -567,7 +556,6 @@ namespace SyncfusionDocument.Controllers
 
         [AcceptVerbs("Post")]
         [HttpPost]
-        [EnableCors("AllowAllOrigins")]
         [Route("Export")]
         public FileStreamResult Export(IFormCollection data)
         {

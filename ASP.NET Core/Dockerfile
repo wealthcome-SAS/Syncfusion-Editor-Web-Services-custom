@@ -12,7 +12,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
-EXPOSE 5000
-ENV ASPNETCORE_URLS=http://+:5000
+EXPOSE 5001
 
 ENTRYPOINT ["dotnet", "EJ2APIServices_NET8.dll"]

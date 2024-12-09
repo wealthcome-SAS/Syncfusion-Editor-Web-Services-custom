@@ -66,11 +66,16 @@ namespace EJ2APIServices
 
             services.AddCors(options =>
             {
-                options.AddPolicy(CorsPolicy,
+                options.AddPolicy("AllowAllOrigins",
                     builder =>
                     {
                         builder
-                            .WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+                            .WithOrigins(
+                                "http://localhost:5173",
+                                "http://127.0.0.1:5173",
+                                "http://localhost:5174",
+                                "http://127.0.0.1:5174"
+                            )
                             .AllowAnyMethod()
                             .AllowAnyHeader()
                             .AllowCredentials();
@@ -98,7 +103,7 @@ namespace EJ2APIServices
 
             // Important : UseCors doit être placé entre UseRouting et UseEndpoints
             app.UseRouting();
-            app.UseCors(CorsPolicy);
+            app.UseCors("AllowAllOrigins");
             app.UseAuthorization();
             app.UseResponseCompression();
             
