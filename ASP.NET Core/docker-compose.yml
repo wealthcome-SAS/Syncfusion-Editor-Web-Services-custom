@@ -1,0 +1,12 @@
+services:
+  syncfusion:
+      image: syncfusion
+      build:
+        context: ./
+        dockerfile: ./Dockerfile
+      ports:
+        - "5001:5001"
+      environment:
+        - SYNCFUSION_LICENSE_KEY=${SYNCFUSION_LICENSE_KEY}
+        - ASPNETCORE_URLS=${ASPNETCORE_URLS}
+        - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
