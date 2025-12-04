@@ -76,7 +76,9 @@ namespace EJ2APIServices
                                 "http://localhost:5174",
                                 "http://127.0.0.1:5174",
                                 "https://pro.preprod.wealthcome.fr",
-                                "https://pro.wealthcome.fr"
+                                "https://pro.wealthcome.fr",
+                                "https://v2.pro.preproduction.wealthcome.fr",
+                                "https://pro.preproduction.aws.wealthcome.fr"
                             )
                             .AllowAnyMethod()
                             .AllowAnyHeader()
