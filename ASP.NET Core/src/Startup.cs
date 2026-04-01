@@ -78,6 +78,7 @@ namespace EJ2APIServices
                                 "https://pro.preprod.wealthcome.fr",
                                 "https://pro.wealthcome.fr",
                                 "https://v2.pro.preproduction.wealthcome.fr",
+                                "https://pro.staging.aws.wealthcome.fr",
                                 "https://pro.preproduction.aws.wealthcome.fr",
                                 "https://pro.production.aws.wealthcome.fr"
                             )
