@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Microsoft.AspNetCore.ResponseCompression;
 using Syncfusion.EJ2.SpellChecker;
 using Newtonsoft.Json;
@@ -70,25 +71,15 @@ namespace EJ2APIServices
                     builder =>
                     {
                         builder
-                            .WithOrigins(
-                                "http://localhost:5173",
-                                "http://127.0.0.1:5173",
-                                "http://localhost:5174",
-                                "http://127.0.0.1:5174",
-                                "https://pro.preprod.wealthcome.fr",
-                                "https://pro.wealthcome.fr",
-                                "https://v2.pro.preproduction.wealthcome.fr",
-                                "https://pro.staging.aws.wealthcome.fr",
-                                "https://pro.preproduction.aws.wealthcome.fr",
-                                "https://pro.production.aws.wealthcome.fr"
-                            )
+                            .SetIsOriginAllowed(origin =>
+                                new Uri(origin).Host.EndsWith(".pro.preview.wealthcome.fr"))
                             .AllowAnyMethod()
                             .AllowAnyHeader()
                             .AllowCredentials();
                     });
             });
 
-            services.Configure<GzipCompressionProviderOptions>(options => 
+            services.Configure<GzipCompressionProviderOptions>(options =>
                 options.Level = System.IO.Compression.CompressionLevel.Optimal);
             services.AddResponseCompression();
         }
@@ -112,7 +103,7 @@ namespace EJ2APIServices
             app.UseCors("AllowAllOrigins");
             app.UseAuthorization();
             app.UseResponseCompression();
-            
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers().RequireCors(CorsPolicy);
