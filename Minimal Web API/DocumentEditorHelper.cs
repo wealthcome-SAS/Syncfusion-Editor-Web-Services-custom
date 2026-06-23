@@ -259,10 +259,17 @@ namespace DocumentEditorCore
                 return null;
             }
             string documentPath = Path.Combine(path, uploadDocument.DocumentName);
-            Stream? stream = null;
-            if (System.IO.File.Exists(documentPath))
+            var baseFull = Path.GetFullPath(path);
+            var fullPath = Path.GetFullPath(documentPath);
+            if (!fullPath.StartsWith(baseFull + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+                && fullPath != baseFull)
             {
-                byte[] bytes = System.IO.File.ReadAllBytes(documentPath);
+                throw new ArgumentException("Invalid file path");
+            }
+            Stream? stream = null;
+            if (System.IO.File.Exists(fullPath))
+            {
+                byte[] bytes = System.IO.File.ReadAllBytes(fullPath);
                 stream = new MemoryStream(bytes);
             }
             else
@@ -367,6 +374,10 @@ namespace DocumentEditorCore
             if (string.IsNullOrEmpty(name))
             {
                 name = "Document1.doc";
+            }
+            if (name.Contains(".."))
+            {
+                throw new ArgumentException("Invalid file path");
             }
             WDocument document = WordDocument.Save(data.Content);
             FileStream fileStream = new FileStream(name, FileMode.OpenOrCreate, FileAccess.ReadWrite);
