@@ -17,17 +17,39 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-web:2.5.12'
 	implementation 'com.syncfusion:syncfusion-ej2-wordprocessor:+'
 	implementation 'com.syncfusion:syncfusion-ej2-spellchecker:+'
 	implementation 'com.syncfusion:syncfusion-docio:+'
 	implementation 'com.syncfusion:syncfusion-javahelper:+'
 	implementation group: 'com.twelvemonkeys.imageio', name: 'imageio-tiff', version: '3.7.0'
 	implementation group: 'com.twelvemonkeys.imageio', name: 'imageio-jpeg', version: '3.7.0'
-	compile 'com.google.code.gson:gson:2.8.6'
+	compile 'com.google.code.gson:gson:2.8.9'
 	testImplementation 'org.apache.httpcomponents:httpclient'
 	testImplementation('org.springframework.boot:spring-boot-starter-test') {
 		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+	
+	// Version constraints for transitive dependencies
+	constraints {
+		implementation 'org.apache.tomcat.embed:tomcat-embed-core:9.0.118'
+		implementation 'org.apache.tomcat:tomcat-coyote:9.0.118'
+		implementation 'org.apache.tomcat:tomcat-catalina:9.0.118'
+		implementation 'org.apache.tomcat:tomcat-util:9.0.118'
+		implementation 'org.apache.tomcat.embed:tomcat-embed-websocket:9.0.118'
+		implementation 'org.springframework:spring-core:5.3.34'
+		implementation 'org.springframework:spring-webmvc:5.3.34'
+		implementation 'org.springframework:spring-web:5.3.34'
+		implementation 'org.springframework:spring-beans:5.3.34'
+		implementation 'org.springframework:spring-expression:5.3.34'
+		implementation 'org.springframework:spring-context:5.3.34'
+		implementation 'org.yaml:snakeyaml:1.32'
+		implementation 'com.fasterxml.jackson.core:jackson-core:2.18.6'
+		implementation 'org.springframework.boot:spring-boot:2.2.11.RELEASE'
+		implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
+		implementation 'org.hibernate.validator:hibernate-validator:6.0.20.Final'
+		implementation 'ch.qos.logback:logback-core:1.2.9'
+		implementation 'ch.qos.logback:logback-classic:1.2.9'
 	}
 }
 
