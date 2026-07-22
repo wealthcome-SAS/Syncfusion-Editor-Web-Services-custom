@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -45,23 +45,6 @@ namespace SyncfusionDocument.Controllers
             {
                 return false;
             }
-        }
-
-        // Strips any directory component from a user-supplied file name, restricts the
-        // extension to the supported document formats, and confirms the resolved path
-        // still resolves inside baseDirectory (defense in depth against path traversal).
-        private static string ResolveSafeDocumentPath(string baseDirectory, string userSuppliedName)
-        {
-            string safeName = Path.GetFileName(userSuppliedName ?? string.Empty);
-            string extension = Path.GetExtension(safeName).ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(safeName) || !IsSupportedDocumentExtension(extension))
-                throw new ArgumentException("Invalid or unsupported document name.");
-
-            string fullPath = Path.GetFullPath(Path.Combine(baseDirectory, safeName));
-            string fullBase = Path.GetFullPath(baseDirectory) + Path.DirectorySeparatorChar;
-            if (!fullPath.StartsWith(fullBase, StringComparison.OrdinalIgnoreCase))
-                throw new UnauthorizedAccessException("Resolved path escapes the document root.");
-            return fullPath;
         }
 
         [AcceptVerbs("Post")]
@@ -449,7 +432,7 @@ namespace SyncfusionDocument.Controllers
             string documentPath = null;
             try
             {
-                documentPath = ResolveSafeDocumentPath(documentsPath, uploadDocument.DocumentName);
+                documentPath = DocumentPathHelper.ResolveSafeDocumentPath(documentsPath, uploadDocument.DocumentName, IsSupportedDocumentExtension);
             }
             catch (Exception)
             {
@@ -560,7 +543,7 @@ namespace SyncfusionDocument.Controllers
                 name = "Document1.doc";
             }
             string format = RetrieveFileType(name);
-            string savePath = ResolveSafeDocumentPath(documentsPath, name);
+            string savePath = DocumentPathHelper.ResolveSafeDocumentPath(documentsPath, name, IsSupportedDocumentExtension);
             WDocument document = WordDocument.Save(data.Content);
             FileStream fileStream = new FileStream(savePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
             document.Save(fileStream, GetWFormatType(format));
