@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Microsoft.AspNetCore.ResponseCompression;
 using Syncfusion.EJ2.SpellChecker;
 using Newtonsoft.Json;
@@ -14,6 +14,7 @@ namespace EJ2APIServices
     public class Startup
     {
         internal static string path;
+        internal static string documentsPath;
         readonly string CorsPolicy = "AllowAllOrigins";
 
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
@@ -31,6 +32,14 @@ namespace EJ2APIServices
             //check the spell check dictionary path environment variable value and assign default data folder
             //if it is null.
             path = string.IsNullOrEmpty(path) ? Path.Combine(env.ContentRootPath, "Data") : Path.Combine(env.ContentRootPath, path);
+
+            //Dedicated, isolated folder for user-supplied document read/write (LoadDocument/Save),
+            //kept separate from the spellcheck dictionary path above.
+            string documentStorageSetting = Configuration["DOCUMENT_STORAGE_PATH"];
+            documentsPath = string.IsNullOrEmpty(documentStorageSetting)
+                ? Path.Combine(env.ContentRootPath, "App_Data", "Documents")
+                : Path.Combine(env.ContentRootPath, documentStorageSetting);
+            Directory.CreateDirectory(documentsPath);
             //Set the default spellcheck.json file if the json filename is empty.
             jsonFileName = string.IsNullOrEmpty(jsonFileName) ? Path.Combine(path, "spellcheck.json") : Path.Combine(path, jsonFileName);
             if (File.Exists(jsonFileName))

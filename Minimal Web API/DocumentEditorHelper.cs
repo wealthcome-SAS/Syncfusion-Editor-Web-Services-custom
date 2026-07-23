@@ -23,11 +23,19 @@ namespace DocumentEditorCore
     public class DocumentEditorHelper
     {
         internal string? path;
+        internal string documentsPath;
+
         public DocumentEditorHelper(IHostEnvironment environment)
         {
             //check the spell check dictionary path environment variable value and assign default data folder
             //if it is null.
             path = Path.Combine(environment.ContentRootPath + "App_Data");
+
+            //Dedicated, isolated folder for user-supplied document read/write (LoadDocument/Save),
+            //kept separate from the spellcheck dictionary path above.
+            documentsPath = Path.Combine(environment.ContentRootPath, "App_Data", "Documents");
+            Directory.CreateDirectory(documentsPath);
+
             //Set the default spellcheck.json file if the json filename is empty.
             string jsonFileName = Path.Combine(path, "spellcheck.json");
             if (System.IO.File.Exists(jsonFileName))
@@ -258,9 +266,17 @@ namespace DocumentEditorCore
             {
                 return null;
             }
-            string documentPath = Path.Combine(path, uploadDocument.DocumentName);
             Stream? stream = null;
-            if (System.IO.File.Exists(documentPath))
+            string? documentPath = null;
+            try
+            {
+                documentPath = ResolveSafeDocumentPath(documentsPath, uploadDocument.DocumentName);
+            }
+            catch (Exception)
+            {
+                // Not a valid local file name (may be a URL instead) - fall through below.
+            }
+            if (documentPath != null && System.IO.File.Exists(documentPath))
             {
                 byte[] bytes = System.IO.File.ReadAllBytes(documentPath);
                 stream = new MemoryStream(bytes);
@@ -361,15 +377,14 @@ namespace DocumentEditorCore
         public void Save(SaveParameter data)
         {
             string name = data.FileName != null ? data.FileName : "Saveddoc.docx";
-
-            string format = RetrieveFileType(name);
-
             if (string.IsNullOrEmpty(name))
             {
                 name = "Document1.doc";
             }
+            string format = RetrieveFileType(name);
+            string savePath = ResolveSafeDocumentPath(documentsPath, name);
             WDocument document = WordDocument.Save(data.Content);
-            FileStream fileStream = new FileStream(name, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            FileStream fileStream = new FileStream(savePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
             document.Save(fileStream, GetWFormatType(format));
             document.Close();
             fileStream.Close();
@@ -400,6 +415,38 @@ namespace DocumentEditorCore
             string format = index > -1 && index < name.Length - 1 ?
                 name.Substring(index) : ".doc";
             return format;
+        }
+
+        // Single source of truth for supported document extensions is the GetWFormatType
+        // mapping below - avoids maintaining a second, separately-drifting extension list.
+        private static bool IsSupportedDocumentExtension(string extension)
+        {
+            try
+            {
+                GetWFormatType(extension);
+                return true;
+            }
+            catch (NotSupportedException)
+            {
+                return false;
+            }
+        }
+
+        // Strips any directory component from a user-supplied file name, restricts the
+        // extension to the supported document formats, and confirms the resolved path
+        // still resolves inside baseDirectory (defense in depth against path traversal).
+        private static string ResolveSafeDocumentPath(string baseDirectory, string userSuppliedName)
+        {
+            string safeName = Path.GetFileName(userSuppliedName ?? string.Empty);
+            string extension = Path.GetExtension(safeName).ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(safeName) || !IsSupportedDocumentExtension(extension))
+                throw new ArgumentException("Invalid or unsupported document name.");
+
+            string fullPath = Path.GetFullPath(Path.Combine(baseDirectory, safeName));
+            string fullBase = Path.GetFullPath(baseDirectory) + Path.DirectorySeparatorChar;
+            if (!fullPath.StartsWith(fullBase, StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Resolved path escapes the document root.");
+            return fullPath;
         }
 
 
