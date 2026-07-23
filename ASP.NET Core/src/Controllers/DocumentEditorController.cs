@@ -1,8 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.IO;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Hosting;
@@ -459,18 +463,114 @@ namespace SyncfusionDocument.Controllers
             document.Dispose();
             return json;
         }
+        // Server-Side Request Forgery guard: rejects loopback/private/link-local/metadata
+        // addresses so the URL-loading branch of LoadDocument cannot be used to reach the
+        // internal network or cloud metadata endpoints. No domain allow-list is enforced -
+        // any other public address is permitted.
+        private const long MaxRemoteDocumentBytes = 50L * 1024 * 1024;
+        private const int RemoteFetchTimeoutSeconds = 15;
+
+        private static bool IsPrivateOrReservedAddress(IPAddress address)
+        {
+            if (address.IsIPv4MappedToIPv6)
+                address = address.MapToIPv4();
+
+            if (IPAddress.IsLoopback(address))
+                return true;
+
+            if (address.AddressFamily == AddressFamily.InterNetwork)
+            {
+                byte[] bytes = address.GetAddressBytes();
+                if (bytes[0] == 0) return true;                                   // 0.0.0.0/8
+                if (bytes[0] == 10) return true;                                  // 10.0.0.0/8
+                if (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127) return true; // 100.64.0.0/10 (CGNAT)
+                if (bytes[0] == 169 && bytes[1] == 254) return true;              // 169.254.0.0/16 (link-local/metadata)
+                if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return true; // 172.16.0.0/12
+                if (bytes[0] == 192 && bytes[1] == 168) return true;              // 192.168.0.0/16
+                if (bytes[0] >= 224) return true;                                 // multicast/reserved
+                return false;
+            }
+            if (address.AddressFamily == AddressFamily.InterNetworkV6)
+            {
+                if (address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6Multicast)
+                    return true;
+                byte[] bytes = address.GetAddressBytes();
+                if ((bytes[0] & 0xfe) == 0xfc) return true;                       // fc00::/7 (unique local)
+                return false;
+            }
+            return true; // Unknown address family - fail closed.
+        }
+
         async Task<MemoryStream> GetDocumentFromURL(string url)
         {
-            var client = new HttpClient(); ;
-            var response = await client.GetAsync(url);
-            var rawStream = await response.Content.ReadAsStreamAsync();
-            if (response.IsSuccessStatusCode)
+            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                return null;
+
+            IPAddress[] addresses;
+            try
             {
-                MemoryStream docStream = new MemoryStream();
-                rawStream.CopyTo(docStream);
-                return docStream;
+                addresses = await Dns.GetHostAddressesAsync(uri.Host);
             }
-            else { return null; }
+            catch (Exception)
+            {
+                return null;
+            }
+            if (addresses.Length == 0 || addresses.Any(IsPrivateOrReservedAddress))
+                return null;
+
+            // Pin the TCP connection to the address validated above so a second DNS lookup
+            // performed at connect time (DNS rebinding) cannot redirect the request elsewhere.
+            IPAddress pinnedAddress = addresses[0];
+            var handler = new SocketsHttpHandler
+            {
+                AllowAutoRedirect = false,
+                ConnectTimeout = TimeSpan.FromSeconds(RemoteFetchTimeoutSeconds),
+                ConnectCallback = async (context, cancellationToken) =>
+                {
+                    var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+                    try
+                    {
+                        await socket.ConnectAsync(pinnedAddress, context.DnsEndPoint.Port, cancellationToken);
+                        return new NetworkStream(socket, ownsSocket: true);
+                    }
+                    catch
+                    {
+                        socket.Dispose();
+                        throw;
+                    }
+                }
+            };
+
+            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(RemoteFetchTimeoutSeconds) };
+            HttpResponseMessage response;
+            try
+            {
+                response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+            if (!response.IsSuccessStatusCode)
+                return null;
+            if (response.Content.Headers.ContentLength is long declaredLength && declaredLength > MaxRemoteDocumentBytes)
+                return null;
+
+            Stream rawStream = await response.Content.ReadAsStreamAsync();
+            MemoryStream docStream = new MemoryStream();
+            byte[] buffer = new byte[81920];
+            long total = 0;
+            int read;
+            while ((read = await rawStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                total += read;
+                if (total > MaxRemoteDocumentBytes)
+                    return null;
+                await docStream.WriteAsync(buffer, 0, read);
+            }
+            docStream.Position = 0;
+            return docStream;
         }
 
         internal static FormatType GetFormatType(string format)
