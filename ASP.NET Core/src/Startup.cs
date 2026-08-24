@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Microsoft.AspNetCore.ResponseCompression;
 using Syncfusion.EJ2.SpellChecker;
 using Newtonsoft.Json;
@@ -14,6 +14,8 @@ namespace EJ2APIServices
     public class Startup
     {
         internal static string path;
+        internal static string documentsPath;
+        readonly string CorsPolicy = "AllowAllOrigins";
 
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
@@ -30,6 +32,14 @@ namespace EJ2APIServices
             //check the spell check dictionary path environment variable value and assign default data folder
             //if it is null.
             path = string.IsNullOrEmpty(path) ? Path.Combine(env.ContentRootPath, "Data") : Path.Combine(env.ContentRootPath, path);
+
+            //Dedicated, isolated folder for user-supplied document read/write (LoadDocument/Save),
+            //kept separate from the spellcheck dictionary path above.
+            string documentStorageSetting = Configuration["DOCUMENT_STORAGE_PATH"];
+            documentsPath = string.IsNullOrEmpty(documentStorageSetting)
+                ? Path.Combine(env.ContentRootPath, "App_Data", "Documents")
+                : Path.Combine(env.ContentRootPath, documentStorageSetting);
+            Directory.CreateDirectory(documentsPath);
             //Set the default spellcheck.json file if the json filename is empty.
             jsonFileName = string.IsNullOrEmpty(jsonFileName) ? Path.Combine(path, "spellcheck.json") : Path.Combine(path, jsonFileName);
             if (File.Exists(jsonFileName))
@@ -52,7 +62,7 @@ namespace EJ2APIServices
         }
 
         public IConfiguration Configuration { get; }
-        readonly string MyAllowSpecificOrigins = "MyPolicy";
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -65,22 +75,35 @@ namespace EJ2APIServices
 
             services.AddCors(options =>
             {
-                options.AddPolicy(MyAllowSpecificOrigins,
-                builder =>
-                {
-                    builder.AllowAnyOrigin()
-                      .AllowAnyMethod()
-                      .AllowAnyHeader();
-                });
+                options.AddPolicy("AllowAllOrigins",
+                    builder =>
+                    {
+                        builder
+                            .WithOrigins(
+                                "http://localhost:5173",
+                                "http://127.0.0.1:5173",
+                                "http://localhost:5174",
+                                "http://127.0.0.1:5174",
+                                "https://pro.preprod.wealthcome.fr",
+                                "https://pro.wealthcome.fr",
+                                "https://v2.pro.preproduction.wealthcome.fr",
+                                "https://pro.staging.aws.wealthcome.fr",
+                                "https://pro.preproduction.aws.wealthcome.fr",
+                                "https://pro.production.aws.wealthcome.fr"
+                            )
+                            .AllowAnyMethod()
+                            .AllowAnyHeader()
+                            .AllowCredentials();
+                    });
             });
-            services.Configure<GzipCompressionProviderOptions>(options => options.Level = System.IO.Compression.CompressionLevel.Optimal);
+
+            services.Configure<GzipCompressionProviderOptions>(options => 
+                options.Level = System.IO.Compression.CompressionLevel.Optimal);
             services.AddResponseCompression();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            //Register Syncfusion license
             string licenseKey = string.Empty;
             Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(licenseKey);
 
@@ -92,14 +115,16 @@ namespace EJ2APIServices
             {
                 app.UseHsts();
             }
-            app.UseHttpsRedirection();
+
+            // Important : UseCors doit être placé entre UseRouting et UseEndpoints
             app.UseRouting();
+            app.UseCors("AllowAllOrigins");
             app.UseAuthorization();
-            app.UseCors(MyAllowSpecificOrigins);
             app.UseResponseCompression();
+            
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers().RequireCors("MyPolicy");
+                endpoints.MapControllers().RequireCors(CorsPolicy);
             });
         }
     }
